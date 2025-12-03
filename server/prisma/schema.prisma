@@ -1,0 +1,233 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  name          String
+  role          UserRole @default(THERAPIST)
+  refreshToken  String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  THERAPIST
+  ASSISTANT
+}
+
+model Client {
+  id               String       @id @default(uuid())
+  name             String
+  email            String?      @unique
+  phone            String
+  birthDate        DateTime?
+  cpf              String?      @unique
+  address          String?
+  city             String?
+  state            String?
+  zipCode          String?
+  emergencyContact String?
+  emergencyPhone   String?
+  notes            String?      @db.Text
+  status           ClientStatus @default(ACTIVE)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  appointments    Appointment[]
+  transactions    Transaction[]
+  sessionPackages ClientSessionPackage[]
+
+  @@map("clients")
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+model Appointment {
+  id           String            @id @default(uuid())
+  clientId     String
+  client       Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  date         DateTime
+  duration     Int               @default(60) // minutos
+  type         SessionType
+  status       AppointmentStatus @default(SCHEDULED)
+  notes        String?           @db.Text
+  sessionNotes String?           @db.Text // anotações pós-sessão
+  price        Decimal           @db.Decimal(10, 2)
+  isPaid       Boolean           @default(false)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  transaction Transaction?
+
+  @@index([clientId])
+  @@index([date])
+  @@index([status])
+  @@map("appointments")
+}
+
+enum SessionType {
+  INDIVIDUAL_THERAPY
+  COACHING
+  COUPLES_THERAPY
+  GROUP_SESSION
+  FIRST_CONSULTATION
+  FOLLOW_UP
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model WorkingHours {
+  id        String  @id @default(uuid())
+  dayOfWeek Int // 0-6 (domingo-sábado)
+  startTime String // "09:00"
+  endTime   String // "18:00"
+  isActive  Boolean @default(true)
+
+  @@map("working_hours")
+}
+
+model BlockedSlot {
+  id        String   @id @default(uuid())
+  date      DateTime
+  startTime String
+  endTime   String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@map("blocked_slots")
+}
+
+model Transaction {
+  id            String              @id @default(uuid())
+  clientId      String?
+  client        Client?             @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  appointmentId String?             @unique
+  appointment   Appointment?        @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  type          TransactionType
+  category      TransactionCategory
+  description   String
+  amount        Decimal             @db.Decimal(10, 2)
+  date          DateTime
+  paymentMethod PaymentMethod?
+  status        TransactionStatus   @default(PENDING)
+  dueDate       DateTime?
+  paidAt        DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([clientId])
+  @@index([date])
+  @@index([status])
+  @@index([type])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum TransactionCategory {
+  SESSION
+  PACKAGE
+  PRODUCT
+  RENT
+  UTILITIES
+  MARKETING
+  SOFTWARE
+  EQUIPMENT
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  PIX
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  HEALTH_INSURANCE
+}
+
+enum TransactionStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model SessionPackage {
+  id           String   @id @default(uuid())
+  name         String
+  sessions     Int
+  price        Decimal  @db.Decimal(10, 2)
+  validityDays Int      @default(90)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  clientPackages ClientSessionPackage[]
+
+  @@map("session_packages")
+}
+
+model ClientSessionPackage {
+  id             String        @id @default(uuid())
+  clientId       String
+  client         Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  packageId      String
+  package        SessionPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  sessionsUsed   Int           @default(0)
+  purchaseDate   DateTime      @default(now())
+  expirationDate DateTime
+  status         PackageStatus @default(ACTIVE)
+
+  @@index([clientId])
+  @@index([status])
+  @@map("client_session_packages")
+}
+
+enum PackageStatus {
+  ACTIVE
+  EXPIRED
+  COMPLETED
+}
+
+model Settings {
+  id                  String   @id @default(uuid())
+  clinicName          String   @default("Minha Clínica")
+  clinicEmail         String?
+  clinicPhone         String?
+  clinicAddress       String?
+  logo                String?
+  defaultSessionPrice Decimal  @default(150.00) @db.Decimal(10, 2)
+  currency            String   @default("BRL")
+  timezone            String   @default("America/Sao_Paulo")
+  updatedAt           DateTime @updatedAt
+
+  @@map("settings")
+}
