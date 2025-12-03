@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -16,7 +16,7 @@ model User {
   password      String
   name          String
   role          UserRole @default(THERAPIST)
-  refreshToken  String?  @db.Text
+  refreshToken  String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -42,7 +42,7 @@ model Client {
   zipCode          String?
   emergencyContact String?
   emergencyPhone   String?
-  notes            String?      @db.Text
+  notes            String?
   status           ClientStatus @default(ACTIVE)
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
@@ -68,9 +68,9 @@ model Appointment {
   duration     Int               @default(60) // minutos
   type         SessionType
   status       AppointmentStatus @default(SCHEDULED)
-  notes        String?           @db.Text
-  sessionNotes String?           @db.Text // anotações pós-sessão
-  price        Decimal           @db.Decimal(10, 2)
+  notes        String?
+  sessionNotes String?
+  price        Float
   isPaid       Boolean           @default(false)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
@@ -131,7 +131,7 @@ model Transaction {
   type          TransactionType
   category      TransactionCategory
   description   String
-  amount        Decimal             @db.Decimal(10, 2)
+  amount        Float
   date          DateTime
   paymentMethod PaymentMethod?
   status        TransactionStatus   @default(PENDING)
@@ -184,7 +184,7 @@ model SessionPackage {
   id           String   @id @default(uuid())
   name         String
   sessions     Int
-  price        Decimal  @db.Decimal(10, 2)
+  price        Float
   validityDays Int      @default(90)
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -224,7 +224,7 @@ model Settings {
   clinicPhone         String?
   clinicAddress       String?
   logo                String?
-  defaultSessionPrice Decimal  @default(150.00) @db.Decimal(10, 2)
+  defaultSessionPrice Float    @default(150.00)
   currency            String   @default("BRL")
   timezone            String   @default("America/Sao_Paulo")
   updatedAt           DateTime @updatedAt
